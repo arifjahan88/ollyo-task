@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { ImageData } from "./Data/ImageData";
-// import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 const Gallery = () => {
   const [show, setShow] = useState(null);
   const [itemsData, setItemsData] = useState(ImageData);
   const [checkedCount, setCheckedCount] = useState(0);
 
+  //Checkbox Function Start here
   const handleCheckboxChange = (id) => {
     const updatedItemsData = itemsData.map((item) => {
       if (item.id === id) {
@@ -20,30 +21,44 @@ const Gallery = () => {
     setCheckedCount(newCheckedCount);
   };
 
+  //Delete Function Start here
   const handledelete = () => {
     const updatedItemsData = itemsData.filter((item) => !item.checked);
     setItemsData(updatedItemsData);
     setCheckedCount(0);
   };
 
-  // const handledraganddrop = (result) => {
-  //   const { destination, source, type } = result;
+  //Drag and Drop Function Start here
+  const handledraganddrop = (result) => {
+    const { destination, source } = result;
 
-  //   if (!destination) {
-  //     return;
-  //   }
+    if (!destination) {
+      return;
+    }
 
-  //   if (destination.droppableId === source.droppableId && destination.index === source.index) {
-  //     return;
-  //   }
+    if (destination.droppableId === source.droppableId) {
+      const reorderedItems = [...itemsData];
+      const [draggedItem] = reorderedItems.splice(result.source.index, 1);
+      reorderedItems.splice(result.destination.index, 0, draggedItem);
+      setItemsData(reorderedItems);
+    } else {
+      // Move an item from one grid to another
+      const sourceGrid = itemsData[result.source.droppableId];
+      const destinationGrid = itemsData[result.destination.droppableId];
 
-  //   if (type === "group") {
-  //     const newItemsData = [...itemsData];
-  //     const [removed] = newItemsData.splice(source.index, 1);
-  //     newItemsData.splice(destination.index, 0, removed);
-  //     setItemsData(newItemsData);
-  //   }
-  // };
+      const sourceItems = [...sourceGrid.items];
+      const destinationItems = [...destinationGrid.items];
+
+      const [movedItem] = sourceItems.splice(result.source.index, 1);
+      destinationItems.splice(result.destination.index, 0, movedItem);
+
+      // Update the source and destination grids
+      sourceGrid.items = sourceItems;
+      destinationGrid.items = destinationItems;
+
+      setItemsData({ ...itemsData });
+    }
+  };
 
   return (
     <section className="container mx-auto lg:px-20 md:px-10 px-5 mt-10">
@@ -65,59 +80,64 @@ const Gallery = () => {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-5 gap-5 justify-items-center">
-        {itemsData.map((item) => {
-          return (
-            <div
-              onMouseEnter={() => {
-                setShow(item.id);
-              }}
-              onMouseLeave={() => {
-                setShow(null);
-              }}
-              key={item.id}
-              className={`${
-                item.id == 1
-                  ? "col-span-2 row-span-2 border rounded-lg relative"
-                  : "border shadow-sm rounded-lg relative"
-              } hover:cursor-pointer`}
-            >
-              {show == item.id && (
-                <>
-                  <div className="bg-black absolute w-full h-full rounded-lg opacity-30"></div>
-                </>
-              )}
-              {item.checked == true && (
-                <div className="bg-blue-200 absolute w-full h-full rounded-lg opacity-30"></div>
-              )}
-              <img src={item.image} className="rounded-lg w-full h-full" alt="gallery" />
-              <div>
-                <input
-                  className="absolute top-5 left-5 scale-150"
-                  type="checkbox"
-                  name="checkbox"
-                  checked={item.checked}
-                  onChange={() => handleCheckboxChange(item.id)}
-                />
-              </div>
-            </div>
-            // <Draggable draggableId={item.dnd} key={item.id} index={idx}>
-            //   {(provided) => (
-
-            //   )}
-            // </Draggable>
-          );
-        })}
-      </div>
-      {/* <DragDropContext onDragEnd={handledraganddrop}>
-        <Droppable droppableId="ROOT" type="group">
+      <DragDropContext onDragEnd={handledraganddrop}>
+        <Droppable droppableId="GRID">
           {(provided) => (
-            <div>
-              
+            <div {...provided.droppableProps} ref={provided.innerRef}>
+              <div className="grid grid-cols-5 gap-5 justify-items-center">
+                {itemsData.map((item, idx) => {
+                  return (
+                    <Draggable draggableId={item.dnd} key={item.id} index={idx}>
+                      {(provided) => (
+                        <div
+                          onMouseEnter={() => {
+                            setShow(item.id);
+                          }}
+                          onMouseLeave={() => {
+                            setShow(null);
+                          }}
+                          className={`${
+                            item.id == 1
+                              ? "col-span-2 row-span-2 border rounded-lg relative"
+                              : "border shadow-sm rounded-lg relative"
+                          } hover:cursor-pointer`}
+                          {...provided.dragHandleProps}
+                          {...provided.draggableProps}
+                          ref={provided.innerRef}
+                        >
+                          {show == item.id && (
+                            <>
+                              <div className="bg-black absolute w-full h-full rounded-lg opacity-30"></div>
+                            </>
+                          )}
+                          {item.checked == true && (
+                            <div className="bg-blue-200 absolute w-full h-full rounded-lg opacity-30"></div>
+                          )}
+                          <img
+                            src={item.image}
+                            className="rounded-lg w-full h-full"
+                            alt="gallery"
+                          />
+                          <div>
+                            <input
+                              className="absolute top-5 left-5 scale-150"
+                              type="checkbox"
+                              name="checkbox"
+                              checked={item.checked}
+                              onChange={() => handleCheckboxChange(item.id)}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
+              </div>
             </div>
           )}
         </Droppable>
-      </DragDropContext> */}
+      </DragDropContext>
     </section>
   );
 };
